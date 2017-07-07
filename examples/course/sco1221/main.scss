@@ -1,0 +1,17 @@
+/* Estilos de prueba. NO UTILIZAR en proyecto*/
+/* Common */
+@import "../assets/styles/common/config";
+@import "../assets/styles/common/function";
+@import "../assets/styles/common/reset";
+@import "../assets/styles/common/colors";
+/* End common */
+/* Components */
+body {
+    width: 80%;
+    margin: 0 auto;
+    padding: 1em;
+}
+
+@import "../assets/styles/mod-viewer";
+@import "~@haztivity/hz-navbar/src/scss/hz-navbar.theme-default.scss";
+/* End components */

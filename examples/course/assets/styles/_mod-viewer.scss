@@ -1,0 +1,19 @@
+//********************************************
+//* Project: hzheader
+//* File: _mod-viewer
+//* Description:
+//*********************************************
+/* _mod-viewer */
+.mod-viewer {
+    height: 95vh;
+    display: flex;
+    flex-direction: column;
+    opacity: 0.9;
+    overflow: hidden;
+    [data-hz-pages],
+    [hz-pages] {
+        overflow: auto;
+    }
+}
+
+/* End _mod-viewer */

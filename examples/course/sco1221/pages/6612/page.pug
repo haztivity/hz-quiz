@@ -1,0 +1,175 @@
+include node:jq-quiz/dist/jq-quiz
+div
+    h1 Test una multi opción
+    //Caso 2
+    +jq-quiz({
+        attributes:{
+            "data-hz-resource":"HzQuiz"
+        }
+    })
+        +jq-quiz__header
+            +jq-quiz__title({
+                content: "Quiz title"
+            })
+            +jq-quiz__description({
+                content: "Quiz description"
+            })
+            +jq-quiz__properties
+                +jq-quiz__property({
+                    content:"Nota corte",
+                    type:"cutOffMark"
+                })
+                +jq-quiz__property({
+                    content: "Nota máxima",
+                    type: "maxPoints"
+                })
+                +jq-quiz__property({
+                    content: "Nota final",
+                    type: "finalMark ? Si : No"
+                })
+                +jq-quiz__property({
+                    content: "Feedback inmediato",
+                    type: "immediateFeedback ? Si : No"
+                })
+            +jq-quiz__actions
+                +jq-quiz__action({
+                    type: "start",
+                    content: "Start"
+                })
+        +jq-quiz__body({
+            multichoice:true,
+            questions: [
+                {
+                    content: "Question 1",
+                    feedback:[
+                        {
+                            type:"ok",
+                            content:"Question feedback OK"
+                        },
+                        {
+                            type: "ko",
+                            content: "Question feedback KO"
+                        }
+                    ],
+                    options: [
+                        {
+                            content: "Incorrect",
+                            name: "question1",
+                            isCorrect: false,
+                            feedback: [
+                                {
+                                    type: "ok",
+                                    content: "Option feedback OK"
+                                },
+                                {
+                                    type: "ko",
+                                    content: "Option feedback KO"
+                                }
+                            ]
+
+                        },
+                        {
+                            content: "Correct",
+                            name: "question1",
+                            isCorrect: true,
+                            feedback: [
+                                {
+                                    content: "Option feedback generic"
+                                }
+                            ]
+                        },
+                        {
+                            content: "Correct 2",
+                            name: "question1",
+                            isCorrect: true,
+                            feedback: [
+                                {
+                                    content: "Option feedback generic"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    content: "Question 2",
+                    options: [
+                        {
+                            content: "Incorrect",
+                            name: "question2",
+                            isCorrect: false
+                        },
+                        {
+                            content: "Correct",
+                            name: "question2",
+                            isCorrect: true
+                        },
+                        {
+                            content: "Correct 2",
+                            name: "question2",
+                            isCorrect: true
+                        }
+                    ],
+                    feedback:[
+                        {
+                            content: "Feedback always"
+                        }
+                    ]
+                },
+                {
+                    content: "Question 3",
+                    options: [
+                        {
+                            content: "Incorrect",
+                            name: "question3",
+                            isCorrect: false
+                        },
+                        {
+                            content: "Correct",
+                            name: "question3",
+                            isCorrect: true
+                        }
+                    ]
+                }
+            ]
+        })
+            +jq-quiz__actions
+                +jq-quiz__action({
+                    type: "prev",
+                    content: "Prev"
+                })
+                +jq-quiz__action({
+                    type: "next",
+                    content: "Next"
+                })
+                +jq-quiz__action({
+                    type: "end",
+                    content: "End"
+                })
+        +jq-quiz__result({
+            items:[
+                {
+                    type:"success?Si:No",
+                    content:"Aprueba"
+                },
+                {
+                    type:"score",
+                    content:"Nota"
+                },
+                {
+                    type:"maxScore",
+                    content:"Nota máxima"
+                },
+                {
+                    type:"questionsSuccess",
+                    content:"Aciertos"
+                },
+                {
+                    type:"questionsFail",
+                    content:"Fallos"
+                },
+                {
+                    type:"questionsNotAttempted",
+                    content:"Respuestas en blanco"
+                }
+            ]
+        })

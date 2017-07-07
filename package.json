@@ -1,0 +1,49 @@
+{
+  "name": "@haztivity/hz-questionnaire",
+  "version": "0.6.0",
+  "description": "Haztivity wrapper for jqQuiz",
+  "main": "dist/HzQuiz.js",
+  "module": "dist/HzQuiz.js",
+  "scripts": {
+    "build": "tsc -p src",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haztivity/hz-quiz.git"
+  },
+  "directories": {
+    "typings": "src"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "types": "src/HzQuiz.ts",
+  "typings": "src/HzQuiz.ts",
+  "author": "Davinchi",
+  "license": "MIT",
+  "homepage": "https://github.com/haztivity/hz-quiz/",
+  "dependencies": {
+    "@haztivity/core": "^0.6.x",
+    "jq-quiz": "^0.6.0",
+    "jquery-ui-dist": "^1.12.x"
+  },
+  "devDependencies": {
+    "@haztivity/cli": "^0.2.5",
+    "@haztivity/hz-navbar": "^0.6.5",
+    "@types/core-js": "^0.9.42",
+    "@types/jquery": "^3.2.6",
+    "@types/loglevel": "^1.4.29",
+    "@types/prismjs": "^1.6.2",
+    "@types/string": "0.0.28",
+    "autoprefixer": "^7.1.2",
+    "commander": "^2.11.0",
+    "jstransformer-markdown-it": "^2.0.0",
+    "merge2": "^1.1.0",
+    "postcss": "^6.0.6",
+    "prismjs": "^1.6.0",
+    "pug": "^2.0.0-rc.2",
+    "require-dir": "^0.3.2",
+    "typescript": "^2.4.1"
+  }
+}

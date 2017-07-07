@@ -1,0 +1,24 @@
+//********************************************
+//* Project: hzcarousel
+//* File: _config
+//* Description:
+//*********************************************
+//_config
+//Responsive
+$config_screen-lg-min: 1200px;
+$config_screen-md-min: 992px;
+$config_screen-sm-min: 768px;
+$config_screen-xs-min: 600px;
+//End responsive
+//Font
+$config_font: Roboto, sans-serif;
+$config_font-base: 16;
+//End font
+//Separation
+$config_separation-section: 24;
+$config_separation-elements: 16;
+//End separation
+$config_animate-fast: 200ms;
+$config_animate-mid: 400ms;
+$config_animate-low: 800ms;
+//End _config

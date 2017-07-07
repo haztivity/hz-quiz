@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "experimentalDecorators": true,
+        "module": "umd",
+        "moduleResolution": "node",
+        "sourceMap": true,
+        "target": "es5",
+        "typeRoots": [
+            "../node_modules/@types",
+            "../jspm_packages/npm/bottlejs@1.5.0/dist"
+        ]
+    },
+    "exclude": [
+        "node_modules",
+        "jspm_packages"
+    ]
+}

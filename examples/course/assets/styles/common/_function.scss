@@ -1,0 +1,21 @@
+@import "config";
+
+@function em($pixels, $context: $config_font-base) {
+    @return #{$pixels/$context}em
+}
+
+@function rem($pixels, $context: $config_font-base) {
+    @return #{$pixels/$context}rem
+}
+
+@mixin clearfix($clear:both) {
+    &:after {
+        content: "";
+        display: block;
+        clear: $clear;
+    }
+}
+
+@function percentaje($elemPixels,$totalPixels) {
+    @return unquote(($elemPixels*100)/$totalPixels+"%")
+}
