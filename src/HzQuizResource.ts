@@ -33,15 +33,18 @@ export class HzQuizResource extends ResourceController {
     public static readonly ON_END = `${HzQuizResource.NAMESPACE}:end`;
     protected static readonly PREFIX = "hz-quiz";
     protected static readonly CLASS_COMPONENT = HzQuizResource.PREFIX;
-    protected static readonly DEFAULT_QUESTIONNAIRE = {
+    protected static readonly DEFAULTS_QUIZ = {
 
     };
-    protected static readonly _DEFAULTS = {
+    protected static readonly DEFAULTS = {
+        storeHighestScore:false,
+        attempts:-1
     };
     protected _config:any;
     protected _instance:any;
     protected _id:any;
     protected _objectiveIndex;
+    protected _availableAttempts;
     /**
      * Recurso de cuestionario. Encapsula jquery.quiz
      * @param _$
@@ -56,11 +59,11 @@ export class HzQuizResource extends ResourceController {
     }
 
     init(options, config?) {
-        this._options = options;
+        this._options = this._$.extend(true,{},HzQuizResource.DEFAULTS,options);
         this._config = config;
-        let questionnaireOptions = this._dataOptions.getDataOptions(this._$element, "jqQuiz");
-        this._options.quiz = this._$.extend(true,{}, HzQuizResource.DEFAULT_QUESTIONNAIRE, questionnaireOptions);
-        this._$element.jqQuiz(questionnaireOptions);
+        let quizOptions  = this._dataOptions.getDataOptions(this._$element, "jqQuiz");
+        this._options.quiz = this._$.extend(true,{}, HzQuizResource.DEFAULTS_QUIZ, quizOptions);
+        this._$element.jqQuiz(quizOptions);
         this._instance = this._$element.jqQuiz("instance");
         this._id = this._instance.getId();
         this._initScorm();
@@ -74,6 +77,21 @@ export class HzQuizResource extends ResourceController {
                 objectiveIndex = this._registerObjective();
             }
             this._objectiveIndex = objectiveIndex;
+            if(this._options.attempts != -1){
+                this._availableAttempts = this._getAvailableAttempts();
+                this._resolveAttemptState();
+            }
+        }
+    }
+    protected _resolveAttemptState(){
+        if(this._options.attempts != -1){
+            if(this._availableAttempts != undefined){
+                this._instance._setOption("availableAttempts",this._availableAttempts);
+                this._instance.redrawProperties();
+                if(this._availableAttempts == 0){
+                    this._instance.disable();
+                }
+            }
         }
     }
     protected _registerObjective(){
@@ -108,10 +126,22 @@ export class HzQuizResource extends ResourceController {
     }
     protected _onEnd(e,jqQuizInstance,calification){
         let instance = e.data.instance;
-        if(instance._scormService.LMSIsInitialized()){
-            instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.score);
-            instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
+        if(instance._scormService.LMSIsInitialized() && this._availableAttempts != 0){
+            if(instance._options.storeHighestScore){
+                let currentScore = instance._scormService.doLMSGetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`);
+                if(calification.score > currentScore){
+                    instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.score);
+                    instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
+                }
+            }else{
+                instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.score);
+                instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
+            }
             instance._scormService.doLMSCommit();
+            if(instance._options.attempts != -1 && instance._availableAttempts > 0){
+                instance._availableAttempts--;
+            }
+            instance._resolveAttemptState();
         }
         instance._navigatorService.enable();
         instance._markAsCompleted();
@@ -121,6 +151,8 @@ export class HzQuizResource extends ResourceController {
     protected _onStart(e,jqQuizInstance){
         let instance = e.data.instance;
         instance._navigatorService.disable();
+        instance._availableAttempts--;
+        instance._storeAttempt();
         instance._eventEmitter.trigger(HzQuizResource.ON_START,[this]);
         instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_START,[this]);
     }
@@ -138,14 +170,69 @@ export class HzQuizResource extends ResourceController {
         instance._eventEmitter.trigger(HzQuizResource.ON_ANSWER,[this, questionId, optionId]);
         instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_ANSWER,[this, questionId, optionId]);
     }
+    protected _setSuspendData(data){
+        let result=false;
+        if(this._scormService.LMSIsInitialized()){
+            try {
+                let parsed = "hqz:" + JSON.stringify(data),
+                    suspendData = this._scormService.doLMSGetValue(`cmi.suspend_data`),
+                    currentQuizData = this._getSuspendData(false);
+                if(currentQuizData){
+                    suspendData = suspendData.replace(currentQuizData, parsed);
+                }else{
+                    suspendData+=parsed;
+                }
+                this._scormService.doLMSSetValue(`cmi.suspend_data`, suspendData);
+                this._scormService.doLMSCommit();
+                result = true;
+            }catch(e){}
+        }
+        return result;
+    }
+    protected _getSuspendData(parse){
+        let result;
+        if(this._scormService.LMSIsInitialized()){
+            let data = this._scormService.doLMSGetValue(`cmi.suspend_data`),
+                quizData = (data||"").match(/hqz:{(\S|\s)*}/g);
+            if(parse != false){
+                if(quizData && quizData.length > 0) {
+                    try {
+                        result = JSON.parse(quizData[0].replace("hqz:", ""));
+                    } catch (e) {
+                    }
+                }else{
+                    result = {};
+                }
+            }else{
+                result = quizData;
+            }
+        }
+        return result;
+    }
+    protected _getAvailableAttempts(){
+        let attempts,
+            current = this._getSuspendData(true);
+        current = current[this._id];
+        attempts = current != undefined ? current : this._options.attempts;
+        return attempts;
+    }
+    protected _storeAttempt(){
+        if(this._scormService.LMSIsInitialized()){
+            let currentData = this._getSuspendData(true);
+            currentData[this._id] = this._availableAttempts;
+            this._setSuspendData(currentData);
+        }
+    }
     public disable(){
         if(super.disable()){
-            this._$element.jqQuiz("option","disabled",true);
+            this._$element.jqQuiz("disable");
         }
     }
     public enable(){
-        if(super.enable()){
-            this._$element.jqQuiz("option","disabled",false);
+        if(this._options.attempts == -1 || this._availableAttempts > 0) {
+            if (super.enable()) {
+                this._$element.jqQuiz("enable");
+            }
         }
     }
     public getInstance(): any {
