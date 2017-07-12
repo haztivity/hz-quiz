@@ -45,6 +45,7 @@ export class HzQuizResource extends ResourceController {
     protected _id:any;
     protected _objectiveIndex;
     protected _availableAttempts;
+    protected _currentScore;
     /**
      * Recurso de cuestionario. Encapsula jquery.quiz
      * @param _$
@@ -67,6 +68,9 @@ export class HzQuizResource extends ResourceController {
         this._instance = this._$element.jqQuiz("instance");
         this._id = this._instance.getId();
         this._initScorm();
+        if(this._currentScore != undefined){
+            this._instance._setOption("currentScore",this._currentScore);
+        }
         this._assignEvents();
     }
     protected _initScorm(){
@@ -75,6 +79,7 @@ export class HzQuizResource extends ResourceController {
             let objectiveIndex = this._findObjectiveIndex(this._id);
             if(objectiveIndex == -1){
                 objectiveIndex = this._registerObjective();
+                this._currentScore = this._scormService.doLMSGetValue(`cmi.objectives.${objectiveIndex}.score.raw`);
             }
             this._objectiveIndex = objectiveIndex;
             if(this._options.attempts != -1){
@@ -99,7 +104,7 @@ export class HzQuizResource extends ResourceController {
             currentObjective = objectives;
         this._scormService.doLMSSetValue(`cmi.objectives.${currentObjective}.id`,this._id);
         this._scormService.doLMSSetValue(`cmi.objectives.${currentObjective}.status`,"not attempted");
-        this._scormService.doLMSSetValue(`cmi.objectives.${currentObjective}.score.max`,this._instance.getMaxPoints());
+        //this._scormService.doLMSSetValue(`cmi.objectives.${currentObjective}.score.max`,this._instance.getMaxPoints());
         this._scormService.doLMSCommit();
         return currentObjective;
     }
@@ -129,18 +134,16 @@ export class HzQuizResource extends ResourceController {
         if(instance._scormService.LMSIsInitialized() && this._availableAttempts != 0){
             if(instance._options.storeHighestScore){
                 let currentScore = instance._scormService.doLMSGetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`);
-                if(calification.score > currentScore){
-                    instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.score);
+                if(calification.percentage > currentScore){
+                    instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.percentage);
                     instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
                 }
             }else{
-                instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.score);
+                instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.percentage);
                 instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
             }
             instance._scormService.doLMSCommit();
-            if(instance._options.attempts != -1 && instance._availableAttempts > 0){
-                instance._availableAttempts--;
-            }
+
             instance._resolveAttemptState();
         }
         instance._navigatorService.enable();
@@ -151,7 +154,9 @@ export class HzQuizResource extends ResourceController {
     protected _onStart(e,jqQuizInstance){
         let instance = e.data.instance;
         instance._navigatorService.disable();
-        instance._availableAttempts--;
+        if(instance._options.attempts != -1 && instance._availableAttempts > 0){
+            instance._availableAttempts--;
+        }
         instance._storeAttempt();
         instance._eventEmitter.trigger(HzQuizResource.ON_START,[this]);
         instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_START,[this]);
@@ -229,7 +234,7 @@ export class HzQuizResource extends ResourceController {
         }
     }
     public enable(){
-        if(this._options.attempts == -1 || this._availableAttempts > 0) {
+        if(this._options.attempts == -1 || this._availableAttempts > 0 || this._scormService.LMSIsInitialized()) {
             if (super.enable()) {
                 this._$element.jqQuiz("enable");
             }
