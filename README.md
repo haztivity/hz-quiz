@@ -167,7 +167,8 @@ For more info please visit [jqQuiz](https://github.com/davinchi-finsi/jq-quiz)
 
 ### HzQuiz options
 HzQuiz provides specific options for the integration quiz haztivity.
-| Option                | Default | Description                                                                                                            |
-| --------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
-| attempts              | -1      | Number of available attempts. When reach 0, the quiz will be blocked. Set -1 for unlimited attempts.                   |
-| storeHighestScore     | false   | If true, the score is stored when is higher than the score of the last attempt. If false, the new score will be stored.|
+
+| Option            | Default | Description |
+| ----------------- | ------- | ----------- |
+| attempts          | -1      | Number of available attempts. When reach 0, the quiz will be blocked. Set -1 for unlimited attempts.|
+| storeHighestScore | false   | If true, the score is stored when is higher than the score of the last attempt. If false, the new score will be stored. |
