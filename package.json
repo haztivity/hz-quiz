@@ -1,6 +1,6 @@
 {
   "name": "@haztivity/hz-quiz",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Haztivity wrapper for jqQuiz",
   "main": "dist/HzQuiz.js",
   "module": "dist/HzQuiz.js",
