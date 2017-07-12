@@ -82,9 +82,9 @@ export class HzQuizResource extends ResourceController {
             let objectiveIndex = this._findObjectiveIndex(this._id);
             if(objectiveIndex == -1){
                 objectiveIndex = this._registerObjective();
-                this._currentScore = this._scormService.doLMSGetValue(`cmi.objectives.${objectiveIndex}.score.raw`);
-                this._resolveCurrentScore();
             }
+            this._currentScore = this._scormService.doLMSGetValue(`cmi.objectives.${objectiveIndex}.score.raw`);
+            this._resolveCurrentScore();
             this._objectiveIndex = objectiveIndex;
             if(this._options.attempts != -1){
                 this._availableAttempts = this._getAvailableAttempts();
