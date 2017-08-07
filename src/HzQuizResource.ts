@@ -152,8 +152,10 @@ export class HzQuizResource extends ResourceController {
         }
         instance._currentScore = calification.percentage;
         instance._resolveCurrentScore();
-        instance._navigatorService.enable();
-        instance._markAsCompleted();
+        if(calification.success) {
+            instance._navigatorService.enable();
+            instance._markAsCompleted();
+        }
         instance._eventEmitter.trigger(HzQuizResource.ON_END,[this, calification]);
         instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_END,[this, calification]);
     }
