@@ -90,14 +90,22 @@ export class HzQuizResource extends ResourceController {
                 this._availableAttempts = this._getAvailableAttempts();
                 this._resolveAttemptState();
             }
+        }else{
+            this._availableAttempts = this._options.attempts;
+            this._resolveAttemptState();
         }
     }
     protected _resolveAttemptState(){
         if(this._options.attempts != -1){
             if(this._availableAttempts != undefined){
                 this._instance._setOption("availableAttempts",this._availableAttempts);
+                this._instance.element.attr("data-jq-quiz-available-attempts",this._availableAttempts);
+                if(this._availableAttempts != this._options.attempts){
+                    this._$element.addClass("hz-quiz--attempted");
+                }
                 this._instance.redrawProperties();
                 if(this._availableAttempts == 0){
+                    this._$element.addClass("hz-quiz--failed");
                     this._instance.disable();
                 }
             }
@@ -147,7 +155,8 @@ export class HzQuizResource extends ResourceController {
                 instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
             }
             instance._scormService.doLMSCommit();
-
+            instance._resolveAttemptState();
+        }else if(instance._availableAttempts != undefined){
             instance._resolveAttemptState();
         }
         instance._currentScore = calification.percentage;
