@@ -77,7 +77,6 @@ export class HzQuizResource extends ResourceController {
         }
     }
     protected _initScorm(){
-        this._scormService.doLMSInitialize();
         if(this._scormService.LMSIsInitialized()){
             let objectiveIndex = this._findObjectiveIndex(this._id);
             if(objectiveIndex == -1){
