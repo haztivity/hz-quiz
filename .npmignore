@@ -1,9 +1,19 @@
-build
-examples
-node_modules
-.fusebox
-haztivycli.config.ts
-haztivycli.config.js
-.idea
+# Created by .ignore support plugin (hsz.mobi)
+build/
+docs/
+node_modules/
 .git
-*.log
+.fusebox
+fuse.js
+rollup.config.js
+gulpfile.js
+package-lock.json
+### VisualStudioCode template
+.vscode/
+### JetBrains
+.idea/
+haztivitycli.config.ts
+haztivitycli.config.js
+examples
+gulpfile
+rollup.config.js

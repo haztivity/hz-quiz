@@ -194,38 +194,32 @@ export class HzQuizResource extends ResourceController {
     protected _setSuspendData(data){
         let result=false;
         if(this._scormService.LMSIsInitialized()){
-            try {
-                let parsed = "hqz:" + JSON.stringify(data),
-                    suspendData = this._scormService.doLMSGetValue(`cmi.suspend_data`),
-                    currentQuizData = this._getSuspendData(false);
-                if(currentQuizData){
-                    suspendData = suspendData.replace(currentQuizData, parsed);
-                }else{
-                    suspendData+=parsed;
-                }
-                this._scormService.doLMSSetValue(`cmi.suspend_data`, suspendData);
+            let currentData = this._getSuspendData(false);
+                currentData.hqz = data;
+            try{
+                const parsed = JSON.stringify(currentData);
+                this._scormService.doLMSSetValue(`cmi.suspend_data`, parsed);
                 this._scormService.doLMSCommit();
                 result = true;
-            }catch(e){}
+            }catch(e){
+                console.error("[HzQuizResource] Failed setting suspend data:",e.message);
+            } 
         }
         return result;
     }
     protected _getSuspendData(parse){
         let result;
         if(this._scormService.LMSIsInitialized()){
-            let data = this._scormService.doLMSGetValue(`cmi.suspend_data`),
-                quizData = (data||"").match(/hqz:{(\S|\s)*}/g);
-            if(parse != false){
-                if(quizData && quizData.length > 0) {
-                    try {
-                        result = JSON.parse(quizData[0].replace("hqz:", ""));
-                    } catch (e) {
-                    }
-                }else{
+            let data = this._scormService.doLMSGetValue(`cmi.suspend_data`);
+            if(!!data){
+                try {
+                    result = JSON.parse(data);
+                } catch (e) {
                     result = {};
+                    console.error("[HzQuizResource] Failed getting suspend data:",e.message);
                 }
             }else{
-                result = quizData;
+                result = {};
             }
         }
         return result;
@@ -233,6 +227,7 @@ export class HzQuizResource extends ResourceController {
     protected _getAvailableAttempts(){
         let attempts,
             current = this._getSuspendData(true);
+        current = current.hqz || current;
         current = current[this._id];
         attempts = current != undefined ? current : this._options.attempts;
         return attempts;
@@ -240,6 +235,7 @@ export class HzQuizResource extends ResourceController {
     protected _storeAttempt(){
         if(this._scormService.LMSIsInitialized()){
             let currentData = this._getSuspendData(true);
+            currentData = currentData.hqz || currentData;
             currentData[this._id] = this._availableAttempts;
             this._setSuspendData(currentData);
         }
@@ -250,7 +246,7 @@ export class HzQuizResource extends ResourceController {
         }
     }
     public enable(){
-        if(this._scormService.LMSIsInitialized() != true || this._options.attempts == -1 || this._availableAttempts > 0) {
+        if(!this._scormService.LMSIsInitialized() || this._options.attempts == -1 || this._availableAttempts > 0) {
             if (super.enable()) {
                 this._$element.jqQuiz("enable");
             }

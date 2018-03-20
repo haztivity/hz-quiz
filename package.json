@@ -24,26 +24,27 @@
   "license": "MIT",
   "homepage": "https://github.com/haztivity/hz-quiz/",
   "dependencies": {
-    "@haztivity/core": "^0.6.x",
-    "jq-quiz": "^0.6.0",
-    "jquery-ui-dist": "^1.12.x"
+    "@haztivity/core": "^0.7.0",
+    "jq-quiz": "^1.0.0",
+    "jquery-ui-dist": "^1.12.1"
   },
   "devDependencies": {
-    "@haztivity/cli": "^0.2.5",
-    "@haztivity/hz-navbar": "^0.6.5",
-    "@types/core-js": "^0.9.42",
-    "@types/jquery": "^3.2.6",
-    "@types/loglevel": "^1.4.29",
-    "@types/prismjs": "^1.6.2",
-    "@types/string": "0.0.28",
-    "autoprefixer": "^7.1.2",
-    "commander": "^2.11.0",
+    "@haztivity/cli": "^0.5.1",
+    "@haztivity/hz-navbar": "^0.7.0",
+    "@types/core-js": "^0.9.46",
+    "@types/jquery": "^3.3.1",
+    "@types/loglevel": "^1.5.3",
+    "@types/prismjs": "^1.9.0",
+    "@types/string": "0.0.29",
+    "autoprefixer": "^8.1.0",
+    "commander": "^2.15.1",
     "jstransformer-markdown-it": "^2.0.0",
-    "merge2": "^1.1.0",
-    "postcss": "^6.0.6",
-    "prismjs": "^1.6.0",
-    "pug": "^2.0.0-rc.2",
-    "require-dir": "^0.3.2",
-    "typescript": "^2.4.1"
+    "merge2": "^1.2.1",
+    "node-sass": "^4.7.2",
+    "postcss": "^6.0.20",
+    "prismjs": "^1.12.2",
+    "pug": "^2.0.1",
+    "require-dir": "^1.0.0",
+    "typescript": "^2.7.2"
   }
 }

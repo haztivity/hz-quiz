@@ -68,32 +68,43 @@ export class HzQuizResource extends ResourceController {
         this._instance = this._$element.jqQuiz("instance");
         this._id = this._instance.getId();
         this._initScorm();
-        if(this._currentScore != undefined){
-            this._instance._setOption("currentScore",this._currentScore);
-        }
         this._assignEvents();
     }
+    protected _resolveCurrentScore(){
+        if(this._currentScore != undefined){
+            this._instance._setOption("currentScore",this._currentScore);
+            this._instance.redrawProperties();
+        }
+    }
     protected _initScorm(){
-        this._scormService.doLMSInitialize();
         if(this._scormService.LMSIsInitialized()){
             let objectiveIndex = this._findObjectiveIndex(this._id);
             if(objectiveIndex == -1){
                 objectiveIndex = this._registerObjective();
-                this._currentScore = this._scormService.doLMSGetValue(`cmi.objectives.${objectiveIndex}.score.raw`);
             }
+            this._currentScore = this._scormService.doLMSGetValue(`cmi.objectives.${objectiveIndex}.score.raw`);
+            this._resolveCurrentScore();
             this._objectiveIndex = objectiveIndex;
             if(this._options.attempts != -1){
                 this._availableAttempts = this._getAvailableAttempts();
                 this._resolveAttemptState();
             }
+        }else{
+            this._availableAttempts = this._options.attempts;
+            this._resolveAttemptState();
         }
     }
     protected _resolveAttemptState(){
         if(this._options.attempts != -1){
             if(this._availableAttempts != undefined){
                 this._instance._setOption("availableAttempts",this._availableAttempts);
+                this._instance.element.attr("data-jq-quiz-available-attempts",this._availableAttempts);
+                if(this._availableAttempts != this._options.attempts){
+                    this._$element.addClass("hz-quiz--attempted");
+                }
                 this._instance.redrawProperties();
                 if(this._availableAttempts == 0){
+                    this._$element.addClass("hz-quiz--failed");
                     this._instance.disable();
                 }
             }
@@ -143,11 +154,16 @@ export class HzQuizResource extends ResourceController {
                 instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
             }
             instance._scormService.doLMSCommit();
-
+            instance._resolveAttemptState();
+        }else if(instance._availableAttempts != undefined){
             instance._resolveAttemptState();
         }
-        instance._navigatorService.enable();
-        instance._markAsCompleted();
+        instance._currentScore = calification.percentage;
+        instance._resolveCurrentScore();
+        if(calification.success) {
+            instance._navigatorService.enable();
+            instance._markAsCompleted();
+        }
         instance._eventEmitter.trigger(HzQuizResource.ON_END,[this, calification]);
         instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_END,[this, calification]);
     }
@@ -178,38 +194,32 @@ export class HzQuizResource extends ResourceController {
     protected _setSuspendData(data){
         let result=false;
         if(this._scormService.LMSIsInitialized()){
-            try {
-                let parsed = "hqz:" + JSON.stringify(data),
-                    suspendData = this._scormService.doLMSGetValue(`cmi.suspend_data`),
-                    currentQuizData = this._getSuspendData(false);
-                if(currentQuizData){
-                    suspendData = suspendData.replace(currentQuizData, parsed);
-                }else{
-                    suspendData+=parsed;
-                }
-                this._scormService.doLMSSetValue(`cmi.suspend_data`, suspendData);
+            let currentData = this._getSuspendData(false);
+                currentData.hqz = data;
+            try{
+                const parsed = JSON.stringify(currentData);
+                this._scormService.doLMSSetValue(`cmi.suspend_data`, parsed);
                 this._scormService.doLMSCommit();
                 result = true;
-            }catch(e){}
+            }catch(e){
+                console.error("[HzQuizResource] Failed setting suspend data:",e.message);
+            } 
         }
         return result;
     }
     protected _getSuspendData(parse){
         let result;
         if(this._scormService.LMSIsInitialized()){
-            let data = this._scormService.doLMSGetValue(`cmi.suspend_data`),
-                quizData = (data||"").match(/hqz:{(\S|\s)*}/g);
-            if(parse != false){
-                if(quizData && quizData.length > 0) {
-                    try {
-                        result = JSON.parse(quizData[0].replace("hqz:", ""));
-                    } catch (e) {
-                    }
-                }else{
+            let data = this._scormService.doLMSGetValue(`cmi.suspend_data`);
+            if(!!data){
+                try {
+                    result = JSON.parse(data);
+                } catch (e) {
                     result = {};
+                    console.error("[HzQuizResource] Failed getting suspend data:",e.message);
                 }
             }else{
-                result = quizData;
+                result = {};
             }
         }
         return result;
@@ -217,6 +227,7 @@ export class HzQuizResource extends ResourceController {
     protected _getAvailableAttempts(){
         let attempts,
             current = this._getSuspendData(true);
+        current = current.hqz || current;
         current = current[this._id];
         attempts = current != undefined ? current : this._options.attempts;
         return attempts;
@@ -224,6 +235,7 @@ export class HzQuizResource extends ResourceController {
     protected _storeAttempt(){
         if(this._scormService.LMSIsInitialized()){
             let currentData = this._getSuspendData(true);
+            currentData = currentData.hqz || currentData;
             currentData[this._id] = this._availableAttempts;
             this._setSuspendData(currentData);
         }
@@ -234,7 +246,7 @@ export class HzQuizResource extends ResourceController {
         }
     }
     public enable(){
-        if(this._options.attempts == -1 || this._availableAttempts > 0 || this._scormService.LMSIsInitialized()) {
+        if(!this._scormService.LMSIsInitialized() || this._options.attempts == -1 || this._availableAttempts > 0) {
             if (super.enable()) {
                 this._$element.jqQuiz("enable");
             }
