@@ -194,10 +194,8 @@ export class HzQuizResource extends ResourceController {
     protected _setSuspendData(data){
         let result=false;
         if(this._scormService.LMSIsInitialized()){
-            let currentData = this._getSuspendData(false);
-                currentData.hqz = data;
             try{
-                const parsed = JSON.stringify(currentData);
+                const parsed = JSON.stringify(data);
                 this._scormService.doLMSSetValue(`cmi.suspend_data`, parsed);
                 this._scormService.doLMSCommit();
                 result = true;
@@ -207,7 +205,7 @@ export class HzQuizResource extends ResourceController {
         }
         return result;
     }
-    protected _getSuspendData(parse){
+    protected _getSuspendData(){
         let result;
         if(this._scormService.LMSIsInitialized()){
             let data = this._scormService.doLMSGetValue(`cmi.suspend_data`);
@@ -226,18 +224,21 @@ export class HzQuizResource extends ResourceController {
     }
     protected _getAvailableAttempts(){
         let attempts,
-            current = this._getSuspendData(true);
-        current = current.hqz || current;
+            current = this._getSuspendData();
+        current = current.hqz || {};
         current = current[this._id];
         attempts = current != undefined ? current : this._options.attempts;
         return attempts;
     }
     protected _storeAttempt(){
-        if(this._scormService.LMSIsInitialized()){
-            let currentData = this._getSuspendData(true);
-            currentData = currentData.hqz || currentData;
-            currentData[this._id] = this._availableAttempts;
-            this._setSuspendData(currentData);
+        if(this._options.attempts != -1) {
+            if (this._scormService.LMSIsInitialized()) {
+                let currentData = this._getSuspendData(),
+                    hqzData = currentData.hqz || {};
+                hqzData[this._id] = this._availableAttempts;
+                currentData.hqz = hqzData;
+                this._setSuspendData(currentData);
+            }
         }
     }
     public disable(){

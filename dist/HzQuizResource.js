@@ -186,10 +186,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
         HzQuizResource.prototype._setSuspendData = function (data) {
             var result = false;
             if (this._scormService.LMSIsInitialized()) {
-                var currentData = this._getSuspendData(false);
-                currentData.hqz = data;
                 try {
-                    var parsed = JSON.stringify(currentData);
+                    var parsed = JSON.stringify(data);
                     this._scormService.doLMSSetValue("cmi.suspend_data", parsed);
                     this._scormService.doLMSCommit();
                     result = true;
@@ -200,7 +198,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             }
             return result;
         };
-        HzQuizResource.prototype._getSuspendData = function (parse) {
+        HzQuizResource.prototype._getSuspendData = function () {
             var result;
             if (this._scormService.LMSIsInitialized()) {
                 var data = this._scormService.doLMSGetValue("cmi.suspend_data");
@@ -220,18 +218,20 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             return result;
         };
         HzQuizResource.prototype._getAvailableAttempts = function () {
-            var attempts, current = this._getSuspendData(true);
-            current = current.hqz || current;
+            var attempts, current = this._getSuspendData();
+            current = current.hqz || {};
             current = current[this._id];
             attempts = current != undefined ? current : this._options.attempts;
             return attempts;
         };
         HzQuizResource.prototype._storeAttempt = function () {
-            if (this._scormService.LMSIsInitialized()) {
-                var currentData = this._getSuspendData(true);
-                currentData = currentData.hqz || currentData;
-                currentData[this._id] = this._availableAttempts;
-                this._setSuspendData(currentData);
+            if (this._options.attempts != -1) {
+                if (this._scormService.LMSIsInitialized()) {
+                    var currentData = this._getSuspendData(), hqzData = currentData.hqz || {};
+                    hqzData[this._id] = this._availableAttempts;
+                    currentData.hqz = hqzData;
+                    this._setSuspendData(currentData);
+                }
             }
         };
         HzQuizResource.prototype.disable = function () {
