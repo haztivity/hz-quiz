@@ -1,10 +1,7 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    }
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -51,6 +48,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             _this._scormService = _scormService;
             _this._navigatorService = _navigatorService;
             _this._dataOptions = _dataOptions;
+            _this._hasScore = true;
             return _this;
         }
         HzQuizResource_1 = HzQuizResource;
@@ -84,6 +82,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
                     this._availableAttempts = this._getAvailableAttempts();
                     this._resolveAttemptState();
                 }
+                var cutOffMark = this._$element.jqQuiz("option", "cutOffMark");
+                if (this._currentScore && cutOffMark) {
+                    if (this._currentScore >= cutOffMark) {
+                        this._$element.addClass("hz-quiz--pass");
+                    }
+                    else {
+                        this._$element.addClass("hz-quiz--fail");
+                    }
+                }
             }
             else {
                 this._availableAttempts = this._options.attempts;
@@ -100,7 +107,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
                     }
                     this._instance.redrawProperties();
                     if (this._availableAttempts == 0) {
-                        this._$element.addClass("hz-quiz--failed");
+                        this._$element.addClass("hz-quiz--no-more-tries");
                         this._instance.disable();
                     }
                 }
@@ -134,21 +141,28 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
                 .on(this._instance.ON_STARTED + "." + HzQuizResource_1.NAMESPACE, { instance: this }, this._onStarted);
         };
         HzQuizResource.prototype._onEnd = function (e, jqQuizInstance, calification) {
-            var instance = e.data.instance;
-            if (instance._scormService.LMSIsInitialized() && this._availableAttempts != 0) {
+            var instance = e.data.instance, scoreHighestThanPrevious;
+            if (instance._scormService.LMSIsInitialized()) {
                 if (instance._options.storeHighestScore) {
                     var currentScore = instance._scormService.doLMSGetValue("cmi.objectives." + instance._objectiveIndex + ".score.raw");
-                    if (calification.percentage > currentScore) {
+                    if (currentScore == "" || calification.percentage > currentScore) {
+                        scoreHighestThanPrevious = true;
                         instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".score.raw", calification.percentage);
                         instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".status", calification.success ? "passed" : "failed");
+                        instance._score = calification.percentage;
+                    }
+                    else {
+                        scoreHighestThanPrevious = false;
                     }
                 }
                 else {
                     instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".score.raw", calification.percentage);
                     instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".status", calification.success ? "passed" : "failed");
+                    instance._score = calification.percentage;
                 }
                 instance._scormService.doLMSCommit();
                 instance._resolveAttemptState();
+                calification.scoreHighestThanPrevious = scoreHighestThanPrevious;
             }
             else if (instance._availableAttempts != undefined) {
                 instance._resolveAttemptState();
@@ -156,7 +170,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             instance._currentScore = calification.percentage;
             instance._resolveCurrentScore();
             if (calification.success) {
-                instance._navigatorService.enable();
+                instance._$element.removeClass("hz-quiz--fail");
+                instance._$element.addClass("hz-quiz--pass");
+            }
+            else {
+                instance._$element.removeClass("hz-quiz--pass");
+                instance._$element.addClass("hz-quiz--fail");
+            }
+            if (instance._options.onlyMarkAsCompletedOnPass == false || (instance._options.onlyMarkAsCompletedOnPass == true && calification.success) || (instance._availableAttempts == 0)) {
                 instance._markAsCompleted();
             }
             instance._eventEmitter.trigger(HzQuizResource_1.ON_END, [this, calification]);
@@ -164,7 +185,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
         };
         HzQuizResource.prototype._onStart = function (e, jqQuizInstance) {
             var instance = e.data.instance;
-            instance._navigatorService.disable();
+            instance._completed = false;
             if (instance._options.attempts != -1 && instance._availableAttempts > 0) {
                 instance._availableAttempts--;
             }
@@ -252,7 +273,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
         HzQuizResource.prototype.getInstance = function () {
             return this._instance;
         };
-        var HzQuizResource_1;
         HzQuizResource.NAMESPACE = "hzQuiz";
         HzQuizResource.ON_ANSWER = HzQuizResource_1.NAMESPACE + ":answer";
         HzQuizResource.ON_START = HzQuizResource_1.NAMESPACE + ":start";
@@ -263,7 +283,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
         HzQuizResource.DEFAULTS_QUIZ = {};
         HzQuizResource.DEFAULTS = {
             storeHighestScore: false,
-            attempts: -1
+            attempts: -1,
+            onlyMarkAsCompletedOnPass: true,
+            setScoreInPage: false
         };
         HzQuizResource = HzQuizResource_1 = __decorate([
             core_1.Resource({
@@ -278,6 +300,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             })
         ], HzQuizResource);
         return HzQuizResource;
+        var HzQuizResource_1;
     }(core_1.ResourceController));
     exports.HzQuizResource = HzQuizResource;
 });

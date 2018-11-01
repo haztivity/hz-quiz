@@ -9,7 +9,8 @@ import {
     EventEmitterFactory,
     ScormService,
     NavigatorService,
-    DataOptions
+    DataOptions,
+    ScoFactory
 } from "@haztivity/core";
 import "jquery-ui-dist/jquery-ui";
 import "jq-quiz";
@@ -38,7 +39,9 @@ export class HzQuizResource extends ResourceController {
     };
     protected static readonly DEFAULTS = {
         storeHighestScore:false,
-        attempts:-1
+        attempts:-1,
+        onlyMarkAsCompletedOnPass:true,
+        setScoreInPage:false
     };
     protected _config:any;
     protected _instance:any;
@@ -46,6 +49,7 @@ export class HzQuizResource extends ResourceController {
     protected _objectiveIndex;
     protected _availableAttempts;
     protected _currentScore;
+    protected _hasScore:boolean = true;
     /**
      * Recurso de cuestionario. Encapsula jquery.quiz
      * @param _$
@@ -89,6 +93,14 @@ export class HzQuizResource extends ResourceController {
                 this._availableAttempts = this._getAvailableAttempts();
                 this._resolveAttemptState();
             }
+            const cutOffMark = this._$element.jqQuiz("option","cutOffMark");
+            if(this._currentScore && cutOffMark){
+                if(this._currentScore >= cutOffMark){
+                    this._$element.addClass("hz-quiz--pass");
+                }else{
+                    this._$element.addClass("hz-quiz--fail");
+                }
+            }
         }else{
             this._availableAttempts = this._options.attempts;
             this._resolveAttemptState();
@@ -104,7 +116,7 @@ export class HzQuizResource extends ResourceController {
                 }
                 this._instance.redrawProperties();
                 if(this._availableAttempts == 0){
-                    this._$element.addClass("hz-quiz--failed");
+                    this._$element.addClass("hz-quiz--no-more-tries");
                     this._instance.disable();
                 }
             }
@@ -141,27 +153,40 @@ export class HzQuizResource extends ResourceController {
             .on(this._instance.ON_STARTED + "." + HzQuizResource.NAMESPACE,{instance:this},this._onStarted)
     }
     protected _onEnd(e,jqQuizInstance,calification){
-        let instance = e.data.instance;
-        if(instance._scormService.LMSIsInitialized() && this._availableAttempts != 0){
+        let instance = e.data.instance,
+            scoreHighestThanPrevious;
+        if(instance._scormService.LMSIsInitialized()){
             if(instance._options.storeHighestScore){
                 let currentScore = instance._scormService.doLMSGetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`);
-                if(calification.percentage > currentScore){
+                if(currentScore == "" || calification.percentage > currentScore){
+                    scoreHighestThanPrevious = true;
                     instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.percentage);
                     instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
+                    instance._score = calification.percentage;
+                }else{
+                    scoreHighestThanPrevious = false;
                 }
             }else{
                 instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.percentage);
                 instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
+                instance._score = calification.percentage;
             }
             instance._scormService.doLMSCommit();
             instance._resolveAttemptState();
+            calification.scoreHighestThanPrevious = scoreHighestThanPrevious;
         }else if(instance._availableAttempts != undefined){
             instance._resolveAttemptState();
         }
         instance._currentScore = calification.percentage;
         instance._resolveCurrentScore();
-        if(calification.success) {
-            instance._navigatorService.enable();
+        if(calification.success){
+            instance._$element.removeClass("hz-quiz--fail");
+            instance._$element.addClass("hz-quiz--pass");
+        }else{
+            instance._$element.removeClass("hz-quiz--pass");
+            instance._$element.addClass("hz-quiz--fail");
+        }
+        if(instance._options.onlyMarkAsCompletedOnPass == false || (instance._options.onlyMarkAsCompletedOnPass == true && calification.success) || (instance._availableAttempts == 0)){
             instance._markAsCompleted();
         }
         instance._eventEmitter.trigger(HzQuizResource.ON_END,[this, calification]);
@@ -169,7 +194,7 @@ export class HzQuizResource extends ResourceController {
     }
     protected _onStart(e,jqQuizInstance){
         let instance = e.data.instance;
-        instance._navigatorService.disable();
+        instance._completed = false;
         if(instance._options.attempts != -1 && instance._availableAttempts > 0){
             instance._availableAttempts--;
         }
