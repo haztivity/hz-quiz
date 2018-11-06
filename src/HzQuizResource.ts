@@ -71,6 +71,7 @@ export class HzQuizResource extends ResourceController {
         this._$element.jqQuiz(quizOptions);
         this._instance = this._$element.jqQuiz("instance");
         this._id = this._instance.getId();
+        this._hasScore = this._options.setScoreInPage;
         this._initScorm();
         this._assignEvents();
     }
@@ -162,14 +163,18 @@ export class HzQuizResource extends ResourceController {
                     scoreHighestThanPrevious = true;
                     instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.percentage);
                     instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
-                    instance._score = calification.percentage;
+                    if(instance._options.setScoreInPage) {
+                        instance._score = calification.percentage;
+                    }
                 }else{
                     scoreHighestThanPrevious = false;
                 }
             }else{
                 instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.percentage);
                 instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
-                instance._score = calification.percentage;
+                if(instance._options.setScoreInPage) {
+                    instance._score = calification.percentage;
+                }
             }
             instance._scormService.doLMSCommit();
             instance._resolveAttemptState();
