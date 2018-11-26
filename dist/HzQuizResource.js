@@ -20,7 +20,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
         if (v !== undefined) module.exports = v;
     }
     else if (typeof define === "function" && define.amd) {
-        define(["require", "exports", "@haztivity/core", "jquery-ui-dist/jquery-ui", "jq-quiz"], factory);
+        define(["require", "exports", "@haztivity/core", "jquery-ui-dist/jquery-ui", "jq-quiz", "js-string-compression"], factory);
     }
 })(function (require, exports) {
     "use strict";
@@ -32,6 +32,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     var core_1 = require("@haztivity/core");
     require("jquery-ui-dist/jquery-ui");
     require("jq-quiz");
+    var jsscompress = require("js-string-compression");
     var HzQuizResource = /** @class */ (function (_super) {
         __extends(HzQuizResource, _super);
         /**
@@ -64,6 +65,12 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             this._initScorm();
             this._assignEvents();
         };
+        HzQuizResource.prototype.startReview = function () {
+            var runtime = this._getData().r;
+            if (runtime) {
+                this._$element.jqQuiz("start", { review: true, runtime: runtime });
+            }
+        };
         HzQuizResource.prototype._resolveCurrentScore = function () {
             if (this._currentScore != undefined) {
                 this._instance._setOption("currentScore", this._currentScore);
@@ -80,7 +87,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
                 this._resolveCurrentScore();
                 this._objectiveIndex = objectiveIndex;
                 if (this._options.attempts != -1) {
-                    this._availableAttempts = this._getAvailableAttempts();
+                    this._availableAttempts = this._getData().a;
                     this._resolveAttemptState();
                 }
                 var cutOffMark = this._$element.jqQuiz("option", "cutOffMark");
@@ -134,25 +141,31 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             }
             return index;
         };
+        HzQuizResource.prototype._onStartReview = function (e) {
+            e.data.instance.startReview();
+        };
         HzQuizResource.prototype._assignEvents = function () {
             this._$element.off(HzQuizResource_1.NAMESPACE)
                 .on(this._instance.ON_OPTION_CHANGE + "." + HzQuizResource_1.NAMESPACE, { instance: this }, this._onOptionChange)
                 .on(this._instance.ON_END + "." + HzQuizResource_1.NAMESPACE, { instance: this }, this._onEnd)
                 .on(this._instance.ON_START + "." + HzQuizResource_1.NAMESPACE, { instance: this }, this._onStart)
-                .on(this._instance.ON_STARTED + "." + HzQuizResource_1.NAMESPACE, { instance: this }, this._onStarted);
+                .on(this._instance.ON_STARTED + "." + HzQuizResource_1.NAMESPACE, { instance: this }, this._onStarted)
+                .on("click." + HzQuizResource_1.NAMESPACE, "[data-jq-quiz-hz-resume]", { instance: this }, this._onStartReview);
         };
-        HzQuizResource.prototype._onEnd = function (e, jqQuizInstance, calification) {
+        HzQuizResource.prototype._onEnd = function (e, jqQuizInstance, calification, runtime) {
             var instance = e.data.instance, scoreHighestThanPrevious;
             if (instance._scormService.LMSIsInitialized()) {
+                var data = instance._getData();
                 if (instance._options.storeHighestScore) {
                     var currentScore = instance._scormService.doLMSGetValue("cmi.objectives." + instance._objectiveIndex + ".score.raw");
-                    if (currentScore == "" || calification.percentage > currentScore) {
+                    if (!currentScore || calification.percentage > currentScore) {
                         scoreHighestThanPrevious = true;
                         instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".score.raw", calification.percentage);
                         instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".status", calification.success ? "passed" : "failed");
                         if (instance._options.setScoreInPage) {
                             instance._score = calification.percentage;
                         }
+                        data.r = runtime;
                     }
                     else {
                         scoreHighestThanPrevious = false;
@@ -164,6 +177,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
                     if (instance._options.setScoreInPage) {
                         instance._score = calification.percentage;
                     }
+                    data.r = runtime;
+                }
+                if (instance._options.saveRuntime) {
+                    instance._setData(data);
                 }
                 instance._scormService.doLMSCommit();
                 instance._resolveAttemptState();
@@ -191,21 +208,25 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
         HzQuizResource.prototype._onStart = function (e, jqQuizInstance) {
             var instance = e.data.instance;
             instance._completed = false;
-            if (instance._options.attempts != -1 && instance._availableAttempts > 0) {
-                instance._availableAttempts--;
+            if (jqQuizInstance._state === jqQuizInstance.STATES.running) {
+                if (instance._options.attempts != -1 && instance._availableAttempts > 0) {
+                    instance._availableAttempts--;
+                }
+                instance._storeAttempt();
+                instance._eventEmitter.trigger(HzQuizResource_1.ON_START, [this]);
+                instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_START, [this]);
             }
-            instance._storeAttempt();
-            instance._eventEmitter.trigger(HzQuizResource_1.ON_START, [this]);
-            instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_START, [this]);
         };
         HzQuizResource.prototype._onStarted = function (e, jqQuizInstance) {
             var instance = e.data.instance;
-            if (instance._scormService.LMSIsInitialized()) {
-                instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".status", "incomplete");
-                instance._scormService.doLMSCommit();
+            if (jqQuizInstance._state === jqQuizInstance.STATES.running) {
+                if (instance._scormService.LMSIsInitialized()) {
+                    instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".status", "incomplete");
+                    instance._scormService.doLMSCommit();
+                }
+                instance._eventEmitter.trigger(HzQuizResource_1.ON_STARTED, [this]);
+                instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_STARTED, [this]);
             }
-            instance._eventEmitter.trigger(HzQuizResource_1.ON_STARTED, [this]);
-            instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_STARTED, [this]);
         };
         HzQuizResource.prototype._onOptionChange = function (e, jqQuizInstance, questionId, optionId) {
             var instance = e.data.instance;
@@ -246,20 +267,61 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             }
             return result;
         };
-        HzQuizResource.prototype._getAvailableAttempts = function () {
-            var attempts, current = this._getSuspendData();
+        HzQuizResource.prototype._compressRuntime = function (runtime) {
+            var result;
+            if (runtime) {
+                try {
+                    result = JSON.stringify(runtime).replace(/"options"/g, '"%o"').replace(/"optionsValues"/g, '"%ov"').replace(/ui-id-/g, '%u').replace(/"isCorrect"/g, '"%c"');
+                    var hm = new jsscompress.Hauffman();
+                    result = hm.compress(result);
+                }
+                catch (e) {
+                    result = runtime;
+                }
+            }
+            return result;
+        };
+        HzQuizResource.prototype._decompressRuntime = function (runtime) {
+            var result;
+            if (runtime) {
+                try {
+                    var hm = new jsscompress.Hauffman();
+                    var decompressed = hm.decompress(runtime);
+                    var str = decompressed.replace(/"%o"/g, '"options"').replace(/"%ov"/g, '"optionsValues"').replace(/%u/g, 'ui-id-').replace(/"%c"/g, '"isCorrect"');
+                    result = JSON.parse(str);
+                }
+                catch (e) {
+                    result = runtime;
+                }
+            }
+            return result;
+        };
+        HzQuizResource.prototype._setData = function (data) {
+            var current = this._getSuspendData();
+            var hzq = current.hqz || {};
+            var compressed = this._compressRuntime(data.r);
+            data.r = compressed;
+            hzq[this._id] = data;
+            current.hqz = hzq;
+            this._setSuspendData(current);
+        };
+        HzQuizResource.prototype._getData = function () {
+            var current = this._getSuspendData();
             current = current.hqz || {};
-            current = current[this._id];
-            attempts = current != undefined ? current : this._options.attempts;
-            return attempts;
+            current = current[this._id] || {};
+            if (typeof current == "number") {
+                current = { a: current };
+            }
+            current.a = current.a != undefined ? current.a : this._options.attempts;
+            current.r = this._decompressRuntime(current.r);
+            return current;
         };
         HzQuizResource.prototype._storeAttempt = function () {
             if (this._options.attempts != -1) {
                 if (this._scormService.LMSIsInitialized()) {
-                    var currentData = this._getSuspendData(), hqzData = currentData.hqz || {};
-                    hqzData[this._id] = this._availableAttempts;
-                    currentData.hqz = hqzData;
-                    this._setSuspendData(currentData);
+                    var currentData = this._getData();
+                    currentData.a = this._availableAttempts;
+                    this._setData(currentData);
                 }
             }
         };
@@ -290,7 +352,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             storeHighestScore: false,
             attempts: -1,
             onlyMarkAsCompletedOnPass: true,
-            setScoreInPage: false
+            setScoreInPage: false,
+            saveRuntime: false
         };
         HzQuizResource = HzQuizResource_1 = __decorate([
             core_1.Resource({
