@@ -150,7 +150,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
                 .on(this._instance.ON_END + "." + HzQuizResource_1.NAMESPACE, { instance: this }, this._onEnd)
                 .on(this._instance.ON_START + "." + HzQuizResource_1.NAMESPACE, { instance: this }, this._onStart)
                 .on(this._instance.ON_STARTED + "." + HzQuizResource_1.NAMESPACE, { instance: this }, this._onStarted)
-                .on("click." + HzQuizResource_1.NAMESPACE, "[data-jq-quiz-hz-resume]", { instance: this }, this._onStartReview);
+                .on("click." + HzQuizResource_1.NAMESPACE, "[data-jq-quiz-hz-review]", { instance: this }, this._onStartReview);
         };
         HzQuizResource.prototype._onEnd = function (e, jqQuizInstance, calification, runtime) {
             var instance = e.data.instance, scoreHighestThanPrevious;

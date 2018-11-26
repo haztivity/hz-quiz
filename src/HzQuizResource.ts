@@ -163,7 +163,7 @@ export class HzQuizResource extends ResourceController {
             .on(this._instance.ON_END + "." + HzQuizResource.NAMESPACE,{instance:this},this._onEnd)
             .on(this._instance.ON_START + "." + HzQuizResource.NAMESPACE,{instance:this},this._onStart)
             .on(this._instance.ON_STARTED + "." + HzQuizResource.NAMESPACE,{instance:this},this._onStarted)
-            .on("click."+HzQuizResource.NAMESPACE,"[data-jq-quiz-hz-resume]",{instance:this},this._onStartReview);
+            .on("click."+HzQuizResource.NAMESPACE,"[data-jq-quiz-hz-review]",{instance:this},this._onStartReview);
     }
     protected _onEnd(e,jqQuizInstance,calification,runtime){
         let instance = e.data.instance,
