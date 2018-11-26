@@ -142,6 +142,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             return index;
         };
         HzQuizResource.prototype._onStartReview = function (e) {
+            e.preventDefault();
             e.data.instance.startReview();
         };
         HzQuizResource.prototype._assignEvents = function () {

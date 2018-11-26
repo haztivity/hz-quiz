@@ -155,6 +155,7 @@ export class HzQuizResource extends ResourceController {
         return index;
     }
     protected _onStartReview(e){
+        e.preventDefault();
         e.data.instance.startReview();
     }
     protected _assignEvents(){
