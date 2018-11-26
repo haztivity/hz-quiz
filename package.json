@@ -26,7 +26,8 @@
   "dependencies": {
     "@haztivity/core": "^0.7.1",
     "jq-quiz": "^2.0.0",
-    "jquery-ui-dist": "^1.12.1"
+    "jquery-ui-dist": "^1.12.1",
+    "js-string-compression": "^1.0.1"
   },
   "devDependencies": {
     "@haztivity/cli": "^0.5.1",

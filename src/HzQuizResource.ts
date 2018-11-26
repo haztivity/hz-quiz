@@ -14,6 +14,7 @@ import {
 } from "@haztivity/core";
 import "jquery-ui-dist/jquery-ui";
 import "jq-quiz";
+import * as jsscompress from "js-string-compression";
 @Resource(
     {
         name: "HzQuiz",
@@ -41,7 +42,8 @@ export class HzQuizResource extends ResourceController {
         storeHighestScore:false,
         attempts:-1,
         onlyMarkAsCompletedOnPass:true,
-        setScoreInPage:false
+        setScoreInPage:false,
+        saveRuntime:false
     };
     protected _config:any;
     protected _instance:any;
@@ -75,6 +77,12 @@ export class HzQuizResource extends ResourceController {
         this._initScorm();
         this._assignEvents();
     }
+    startReview(){
+        let runtime = this._getData().r;
+        if(runtime){
+            this._$element.jqQuiz("start",{review:true,runtime:runtime});
+        }
+    }
     protected _resolveCurrentScore(){
         if(this._currentScore != undefined){
             this._instance._setOption("currentScore",this._currentScore);
@@ -91,7 +99,7 @@ export class HzQuizResource extends ResourceController {
             this._resolveCurrentScore();
             this._objectiveIndex = objectiveIndex;
             if(this._options.attempts != -1){
-                this._availableAttempts = this._getAvailableAttempts();
+                this._availableAttempts = this._getData().a;
                 this._resolveAttemptState();
             }
             const cutOffMark = this._$element.jqQuiz("option","cutOffMark");
@@ -146,26 +154,32 @@ export class HzQuizResource extends ResourceController {
         }
         return index;
     }
+    protected _onStartReview(e){
+        e.data.instance.startReview();
+    }
     protected _assignEvents(){
         this._$element.off(HzQuizResource.NAMESPACE)
             .on(this._instance.ON_OPTION_CHANGE + "." + HzQuizResource.NAMESPACE,{instance:this},this._onOptionChange)
             .on(this._instance.ON_END + "." + HzQuizResource.NAMESPACE,{instance:this},this._onEnd)
             .on(this._instance.ON_START + "." + HzQuizResource.NAMESPACE,{instance:this},this._onStart)
             .on(this._instance.ON_STARTED + "." + HzQuizResource.NAMESPACE,{instance:this},this._onStarted)
+            .on("click."+HzQuizResource.NAMESPACE,"[data-jq-quiz-hz-resume]",{instance:this},this._onStartReview);
     }
-    protected _onEnd(e,jqQuizInstance,calification){
+    protected _onEnd(e,jqQuizInstance,calification,runtime){
         let instance = e.data.instance,
             scoreHighestThanPrevious;
         if(instance._scormService.LMSIsInitialized()){
+            let data = instance._getData();
             if(instance._options.storeHighestScore){
                 let currentScore = instance._scormService.doLMSGetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`);
-                if(currentScore == "" || calification.percentage > currentScore){
+                if(!currentScore || calification.percentage > currentScore){
                     scoreHighestThanPrevious = true;
                     instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.percentage);
                     instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
                     if(instance._options.setScoreInPage) {
                         instance._score = calification.percentage;
                     }
+                    data.r = runtime;
                 }else{
                     scoreHighestThanPrevious = false;
                 }
@@ -175,6 +189,10 @@ export class HzQuizResource extends ResourceController {
                 if(instance._options.setScoreInPage) {
                     instance._score = calification.percentage;
                 }
+                data.r = runtime;
+            }
+            if(instance._options.saveRuntime) {
+                instance._setData(data);
             }
             instance._scormService.doLMSCommit();
             instance._resolveAttemptState();
@@ -200,21 +218,25 @@ export class HzQuizResource extends ResourceController {
     protected _onStart(e,jqQuizInstance){
         let instance = e.data.instance;
         instance._completed = false;
-        if(instance._options.attempts != -1 && instance._availableAttempts > 0){
-            instance._availableAttempts--;
+        if(jqQuizInstance._state === jqQuizInstance.STATES.running) {
+            if (instance._options.attempts != -1 && instance._availableAttempts > 0) {
+                instance._availableAttempts--;
+            }
+            instance._storeAttempt();
+            instance._eventEmitter.trigger(HzQuizResource.ON_START, [this]);
+            instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_START, [this]);
         }
-        instance._storeAttempt();
-        instance._eventEmitter.trigger(HzQuizResource.ON_START,[this]);
-        instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_START,[this]);
     }
     protected _onStarted(e,jqQuizInstance){
         let instance = e.data.instance;
-        if(instance._scormService.LMSIsInitialized()){
-            instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,"incomplete");
-            instance._scormService.doLMSCommit();
+        if(jqQuizInstance._state === jqQuizInstance.STATES.running) {
+            if (instance._scormService.LMSIsInitialized()) {
+                instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`, "incomplete");
+                instance._scormService.doLMSCommit();
+            }
+            instance._eventEmitter.trigger(HzQuizResource.ON_STARTED, [this]);
+            instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_STARTED, [this]);
         }
-        instance._eventEmitter.trigger(HzQuizResource.ON_STARTED,[this]);
-        instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_STARTED,[this]);
     }
     protected _onOptionChange(e,jqQuizInstance,questionId,optionId){
         let instance:HzQuizResource = e.data.instance;
@@ -252,22 +274,61 @@ export class HzQuizResource extends ResourceController {
         }
         return result;
     }
-    protected _getAvailableAttempts(){
-        let attempts,
-            current = this._getSuspendData();
+    protected _compressRuntime(runtime){
+        let result;
+        if(runtime) {
+            try {
+                result = JSON.stringify(runtime).replace(/"options"/g, '"%o"').replace(/"optionsValues"/g,
+                    '"%ov"').replace(/ui-id-/g, '%u').replace(/"isCorrect"/g, '"%c"');
+                let hm = new jsscompress.Hauffman();
+                result = hm.compress(result);
+            } catch (e) {
+                result = runtime;
+            }
+        }
+        return result;
+    }
+    protected _decompressRuntime(runtime){
+        let result;
+        if(runtime) {
+            try {
+                let hm = new jsscompress.Hauffman();
+                let decompressed = hm.decompress(runtime);
+                let str = decompressed.replace(/"%o"/g, '"options"').replace(/"%ov"/g, '"optionsValues"').replace(/%u/g,
+                    'ui-id-').replace(/"%c"/g, '"isCorrect"');
+                result = JSON.parse(str);
+            } catch (e) {
+                result = runtime;
+            }
+        }
+        return result;
+    }
+    protected _setData(data){
+        let current = this._getSuspendData();
+        let hzq = current.hqz || {};
+        let compressed = this._compressRuntime(data.r);
+        data.r = compressed;
+        hzq[this._id] = data;
+        current.hqz = hzq;
+        this._setSuspendData(current);
+    }
+    protected _getData(){
+        let current = this._getSuspendData();
         current = current.hqz || {};
-        current = current[this._id];
-        attempts = current != undefined ? current : this._options.attempts;
-        return attempts;
+        current = current[this._id] || {};
+        if(typeof current == "number"){
+            current = {a:current};
+        }
+        current.a = current.a != undefined ? current.a : this._options.attempts;
+        current.r = this._decompressRuntime(current.r);
+        return current;
     }
     protected _storeAttempt(){
         if(this._options.attempts != -1) {
             if (this._scormService.LMSIsInitialized()) {
-                let currentData = this._getSuspendData(),
-                    hqzData = currentData.hqz || {};
-                hqzData[this._id] = this._availableAttempts;
-                currentData.hqz = hqzData;
-                this._setSuspendData(currentData);
+                let currentData = this._getData();
+                currentData.a = this._availableAttempts;
+                this._setData(currentData);
             }
         }
     }
