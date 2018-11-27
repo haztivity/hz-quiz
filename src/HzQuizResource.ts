@@ -43,7 +43,8 @@ export class HzQuizResource extends ResourceController {
         attempts:-1,
         onlyMarkAsCompletedOnPass:true,
         setScoreInPage:false,
-        saveRuntime:false
+        saveRuntime:false,
+        autoComplete:false
     };
     protected _config:any;
     protected _instance:any;
@@ -76,11 +77,14 @@ export class HzQuizResource extends ResourceController {
         this._hasScore = this._options.setScoreInPage;
         this._initScorm();
         this._assignEvents();
+        if(this._options.autoComplete){
+            this._markAsCompleted();
+        }
     }
     startReview(){
         let runtime = this._getData().r;
         if(runtime){
-            this._$element.jqQuiz("start",{review:true,runtime:runtime});
+            this._$element.jqQuiz("start",{revitew:true,runtime:runtime});
         }
     }
     protected _resolveCurrentScore(){
@@ -303,7 +307,7 @@ export class HzQuizResource extends ResourceController {
         return result;
     }
     protected _setData(data){
-        let current = this._getSuspendData();
+        let current = this._getSuspendData() || {};
         let hzq = current.hqz || {};
         let compressed = this._compressRuntime(data.r);
         data.r = compressed;
@@ -312,7 +316,7 @@ export class HzQuizResource extends ResourceController {
         this._setSuspendData(current);
     }
     protected _getData(){
-        let current = this._getSuspendData();
+        let current = this._getSuspendData() || {};
         current = current.hqz || {};
         current = current[this._id] || {};
         if(typeof current == "number"){
@@ -330,6 +334,12 @@ export class HzQuizResource extends ResourceController {
                 this._setData(currentData);
             }
         }
+    }
+    public calificate(runtime){
+        return this._$element.jqQuiz("calificate",runtime);
+    }
+    public getRuntime(){
+        return this._getData().r;
     }
     public disable(){
         if(super.disable()){

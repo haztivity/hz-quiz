@@ -64,11 +64,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             this._hasScore = this._options.setScoreInPage;
             this._initScorm();
             this._assignEvents();
+            if (this._options.autoComplete) {
+                this._markAsCompleted();
+            }
         };
         HzQuizResource.prototype.startReview = function () {
             var runtime = this._getData().r;
             if (runtime) {
-                this._$element.jqQuiz("start", { review: true, runtime: runtime });
+                this._$element.jqQuiz("start", { revitew: true, runtime: runtime });
             }
         };
         HzQuizResource.prototype._resolveCurrentScore = function () {
@@ -296,7 +299,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             return result;
         };
         HzQuizResource.prototype._setData = function (data) {
-            var current = this._getSuspendData();
+            var current = this._getSuspendData() || {};
             var hzq = current.hqz || {};
             var compressed = this._compressRuntime(data.r);
             data.r = compressed;
@@ -305,7 +308,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             this._setSuspendData(current);
         };
         HzQuizResource.prototype._getData = function () {
-            var current = this._getSuspendData();
+            var current = this._getSuspendData() || {};
             current = current.hqz || {};
             current = current[this._id] || {};
             if (typeof current == "number") {
@@ -323,6 +326,12 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
                     this._setData(currentData);
                 }
             }
+        };
+        HzQuizResource.prototype.calificate = function (runtime) {
+            return this._$element.jqQuiz("calificate", runtime);
+        };
+        HzQuizResource.prototype.getRuntime = function () {
+            return this._getData().r;
         };
         HzQuizResource.prototype.disable = function () {
             if (_super.prototype.disable.call(this)) {
@@ -352,7 +361,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             attempts: -1,
             onlyMarkAsCompletedOnPass: true,
             setScoreInPage: false,
-            saveRuntime: false
+            saveRuntime: false,
+            autoComplete: false
         };
         HzQuizResource = HzQuizResource_1 = __decorate([
             core_1.Resource({
