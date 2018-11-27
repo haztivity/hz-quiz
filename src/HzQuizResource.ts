@@ -14,7 +14,7 @@ import {
 } from "@haztivity/core";
 import "jquery-ui-dist/jquery-ui";
 import "jq-quiz";
-import * as jsscompress from "js-string-compression";
+import * as LZString from "lz-string";
 @Resource(
     {
         name: "HzQuiz",
@@ -281,8 +281,7 @@ export class HzQuizResource extends ResourceController {
             try {
                 result = JSON.stringify(runtime).replace(/"options"/g, '"%o"').replace(/"optionsValues"/g,
                     '"%ov"').replace(/ui-id-/g, '%u').replace(/"isCorrect"/g, '"%c"');
-                let hm = new jsscompress.Hauffman();
-                result = hm.compress(result);
+                result = LZString.compress(result);
             } catch (e) {
                 result = runtime;
             }
@@ -293,8 +292,7 @@ export class HzQuizResource extends ResourceController {
         let result;
         if(runtime) {
             try {
-                let hm = new jsscompress.Hauffman();
-                let decompressed = hm.decompress(runtime);
+                let decompressed = LZString.decompress(runtime);
                 let str = decompressed.replace(/"%o"/g, '"options"').replace(/"%ov"/g, '"optionsValues"').replace(/%u/g,
                     'ui-id-').replace(/"%c"/g, '"isCorrect"');
                 result = JSON.parse(str);

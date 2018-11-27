@@ -20,7 +20,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
         if (v !== undefined) module.exports = v;
     }
     else if (typeof define === "function" && define.amd) {
-        define(["require", "exports", "@haztivity/core", "jquery-ui-dist/jquery-ui", "jq-quiz", "js-string-compression"], factory);
+        define(["require", "exports", "@haztivity/core", "jquery-ui-dist/jquery-ui", "jq-quiz", "lz-string"], factory);
     }
 })(function (require, exports) {
     "use strict";
@@ -32,7 +32,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     var core_1 = require("@haztivity/core");
     require("jquery-ui-dist/jquery-ui");
     require("jq-quiz");
-    var jsscompress = require("js-string-compression");
+    var LZString = require("lz-string");
     var HzQuizResource = /** @class */ (function (_super) {
         __extends(HzQuizResource, _super);
         /**
@@ -273,8 +273,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             if (runtime) {
                 try {
                     result = JSON.stringify(runtime).replace(/"options"/g, '"%o"').replace(/"optionsValues"/g, '"%ov"').replace(/ui-id-/g, '%u').replace(/"isCorrect"/g, '"%c"');
-                    var hm = new jsscompress.Hauffman();
-                    result = hm.compress(result);
+                    result = LZString.compress(result);
                 }
                 catch (e) {
                     result = runtime;
@@ -286,8 +285,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             var result;
             if (runtime) {
                 try {
-                    var hm = new jsscompress.Hauffman();
-                    var decompressed = hm.decompress(runtime);
+                    var decompressed = LZString.decompress(runtime);
                     var str = decompressed.replace(/"%o"/g, '"options"').replace(/"%ov"/g, '"optionsValues"').replace(/%u/g, 'ui-id-').replace(/"%c"/g, '"isCorrect"');
                     result = JSON.parse(str);
                 }
