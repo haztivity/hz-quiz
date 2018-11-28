@@ -238,38 +238,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_ANSWER, [this, questionId, optionId]);
         };
         HzQuizResource.prototype._setSuspendData = function (data) {
-            var result = false;
-            if (this._scormService.LMSIsInitialized()) {
-                try {
-                    var parsed = JSON.stringify(data);
-                    this._scormService.doLMSSetValue("cmi.suspend_data", parsed);
-                    this._scormService.doLMSCommit();
-                    result = true;
-                }
-                catch (e) {
-                    console.error("[HzQuizResource] Failed setting suspend data:", e.message);
-                }
-            }
-            return result;
+            return this._scormService.setSuspendData(data);
         };
         HzQuizResource.prototype._getSuspendData = function () {
-            var result;
-            if (this._scormService.LMSIsInitialized()) {
-                var data = this._scormService.doLMSGetValue("cmi.suspend_data");
-                if (!!data) {
-                    try {
-                        result = JSON.parse(data);
-                    }
-                    catch (e) {
-                        result = {};
-                        console.error("[HzQuizResource] Failed getting suspend data:", e.message);
-                    }
-                }
-                else {
-                    result = {};
-                }
-            }
-            return result;
+            return this._scormService.getSuspendData();
         };
         HzQuizResource.prototype._compressRuntime = function (runtime) {
             var result;

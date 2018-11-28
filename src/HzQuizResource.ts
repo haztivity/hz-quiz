@@ -249,35 +249,10 @@ export class HzQuizResource extends ResourceController {
         instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_ANSWER,[this, questionId, optionId]);
     }
     protected _setSuspendData(data){
-        let result=false;
-        if(this._scormService.LMSIsInitialized()){
-            try{
-                const parsed = JSON.stringify(data);
-                this._scormService.doLMSSetValue(`cmi.suspend_data`, parsed);
-                this._scormService.doLMSCommit();
-                result = true;
-            }catch(e){
-                console.error("[HzQuizResource] Failed setting suspend data:",e.message);
-            } 
-        }
-        return result;
+        return this._scormService.setSuspendData(data);
     }
     protected _getSuspendData(){
-        let result;
-        if(this._scormService.LMSIsInitialized()){
-            let data = this._scormService.doLMSGetValue(`cmi.suspend_data`);
-            if(!!data){
-                try {
-                    result = JSON.parse(data);
-                } catch (e) {
-                    result = {};
-                    console.error("[HzQuizResource] Failed getting suspend data:",e.message);
-                }
-            }else{
-                result = {};
-            }
-        }
-        return result;
+       return this._scormService.getSuspendData();
     }
     protected _compressRuntime(runtime){
         let result;
