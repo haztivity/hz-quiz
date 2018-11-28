@@ -177,7 +177,7 @@ export class HzQuizResource extends ResourceController {
             let data = instance._getData();
             if(instance._options.storeHighestScore){
                 let currentScore = instance._scormService.doLMSGetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`);
-                if(!currentScore || calification.percentage > currentScore){
+                if(!currentScore || calification.percentage >= currentScore){
                     scoreHighestThanPrevious = true;
                     instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.percentage);
                     instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,calification.success ? "passed" : "failed");
