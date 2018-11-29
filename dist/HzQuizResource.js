@@ -71,7 +71,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
         HzQuizResource.prototype.startReview = function () {
             var runtime = this._getData().r;
             if (runtime) {
-                this._$element.jqQuiz("start", { revitew: true, runtime: runtime });
+                this._$element.jqQuiz("start", { review: true, runtime: runtime });
             }
         };
         HzQuizResource.prototype._resolveCurrentScore = function () {
@@ -244,11 +244,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             return this._scormService.getSuspendData();
         };
         HzQuizResource.prototype._compressRuntime = function (runtime) {
-            var result;
+            var result = runtime;
             if (runtime) {
                 try {
-                    result = JSON.stringify(runtime).replace(/"options"/g, '"%o"').replace(/"optionsValues"/g, '"%ov"').replace(/ui-id-/g, '%u').replace(/"isCorrect"/g, '"%c"');
-                    result = LZString.compress(result);
+                    if (!!this._options.compressRuntime && this._options.compressRuntime > 0) {
+                        result = JSON.stringify(runtime).replace(/"options"/g, '"%o"').replace(/"optionsValues"/g, '"%v"').replace(/ui-id-/g, '%u').replace(/"isCorrect":true/g, '"%c":"t"').replace(/"isCorrect":false/g, '"%c":"f"');
+                    }
+                    if (!!this._options.compressRuntime && this._options.compressRuntime > 1) {
+                        result = LZString.compress(result);
+                    }
                 }
                 catch (e) {
                     result = runtime;
@@ -257,12 +261,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             return result;
         };
         HzQuizResource.prototype._decompressRuntime = function (runtime) {
-            var result;
+            var result = runtime;
             if (runtime) {
                 try {
-                    var decompressed = LZString.decompress(runtime);
-                    var str = decompressed.replace(/"%o"/g, '"options"').replace(/"%ov"/g, '"optionsValues"').replace(/%u/g, 'ui-id-').replace(/"%c"/g, '"isCorrect"');
-                    result = JSON.parse(str);
+                    var decompressed = runtime;
+                    if (!!this._options.compressRuntime && this._options.compressRuntime > 1) {
+                        decompressed = LZString.decompress(runtime);
+                    }
+                    if (!!this._options.compressRuntime && this._options.compressRuntime > 0) {
+                        decompressed = decompressed.replace(/"%o"/g, '"options"').replace(/"%v"/g, '"optionsValues"').replace(/%u/g, 'ui-id-').replace(/"%c":"t"/g, '"isCorrect":true').replace(/"%c":"f"/g, '"isCorrect":false');
+                    }
+                    result = JSON.parse(decompressed);
                 }
                 catch (e) {
                     result = runtime;
@@ -334,7 +343,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             onlyMarkAsCompletedOnPass: true,
             setScoreInPage: false,
             saveRuntime: false,
-            autoComplete: false
+            autoComplete: false,
+            compressRuntime: false
         };
         HzQuizResource = HzQuizResource_1 = __decorate([
             core_1.Resource({

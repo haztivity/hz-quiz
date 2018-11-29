@@ -44,7 +44,8 @@ export class HzQuizResource extends ResourceController {
         onlyMarkAsCompletedOnPass:true,
         setScoreInPage:false,
         saveRuntime:false,
-        autoComplete:false
+        autoComplete:false,
+        compressRuntime:false
     };
     protected _config:any;
     protected _instance:any;
@@ -84,7 +85,7 @@ export class HzQuizResource extends ResourceController {
     startReview(){
         let runtime = this._getData().r;
         if(runtime){
-            this._$element.jqQuiz("start",{revitew:true,runtime:runtime});
+            this._$element.jqQuiz("start",{review:true,runtime:runtime});
         }
     }
     protected _resolveCurrentScore(){
@@ -255,12 +256,16 @@ export class HzQuizResource extends ResourceController {
        return this._scormService.getSuspendData();
     }
     protected _compressRuntime(runtime){
-        let result;
+        let result = runtime;
         if(runtime) {
             try {
-                result = JSON.stringify(runtime).replace(/"options"/g, '"%o"').replace(/"optionsValues"/g,
-                    '"%ov"').replace(/ui-id-/g, '%u').replace(/"isCorrect"/g, '"%c"');
-                result = LZString.compress(result);
+                if(!!this._options.compressRuntime && this._options.compressRuntime > 0) {
+                    result = JSON.stringify(runtime).replace(/"options"/g, '"%o"').replace(/"optionsValues"/g,
+                        '"%v"').replace(/ui-id-/g, '%u').replace(/"isCorrect":true/g, '"%c":"t"').replace(/"isCorrect":false/g, '"%c":"f"');
+                }
+                if(!!this._options.compressRuntime && this._options.compressRuntime > 1) {
+                    result = LZString.compress(result);
+                }
             } catch (e) {
                 result = runtime;
             }
@@ -268,13 +273,19 @@ export class HzQuizResource extends ResourceController {
         return result;
     }
     protected _decompressRuntime(runtime){
-        let result;
+        let result = runtime;
         if(runtime) {
             try {
-                let decompressed = LZString.decompress(runtime);
-                let str = decompressed.replace(/"%o"/g, '"options"').replace(/"%ov"/g, '"optionsValues"').replace(/%u/g,
-                    'ui-id-').replace(/"%c"/g, '"isCorrect"');
-                result = JSON.parse(str);
+                let decompressed = runtime;
+                if(!!this._options.compressRuntime && this._options.compressRuntime > 1) {
+                    decompressed = LZString.decompress(runtime);
+                }
+                if(!!this._options.compressRuntime && this._options.compressRuntime > 0) {
+                    decompressed = decompressed.replace(/"%o"/g, '"options"').replace(/"%v"/g, '"optionsValues"').replace(
+                        /%u/g,
+                        'ui-id-').replace(/"%c":"t"/g, '"isCorrect":true').replace(/"%c":"f"/g, '"isCorrect":false');
+                }
+                result = JSON.parse(decompressed);
             } catch (e) {
                 result = runtime;
             }
