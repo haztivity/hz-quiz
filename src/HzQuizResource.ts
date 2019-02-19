@@ -188,6 +188,9 @@ export class HzQuizResource extends ResourceController {
                     data.r = runtime;
                 }else{
                     scoreHighestThanPrevious = false;
+                    if(instance._options.setScoreInPage) {
+                        instance._score = currentScore;
+                    }
                 }
             }else{
                 instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,calification.percentage);
