@@ -47,7 +47,8 @@ export class HzQuizResource extends ResourceController {
         saveRuntime:false,
         autoComplete:false,
         compressRuntime:false,
-        objectiveAsCompleted: false
+        objectiveAsCompleted: false,
+        loadingQuery: "[data-hz-quiz-loading]"
     };
     protected _config:any;
     protected _instance:any;
@@ -55,6 +56,7 @@ export class HzQuizResource extends ResourceController {
     protected _objectiveIndex;
     protected _availableAttempts;
     protected _currentScore;
+    protected _$loading: JQuery;
     protected _hasScore:boolean = true;
     /**
      * Recurso de cuestionario. Encapsula jquery.quiz
@@ -74,6 +76,7 @@ export class HzQuizResource extends ResourceController {
         this._config = config;
         let quizOptions  = this._dataOptions.getDataOptions(this._$element, "jqQuiz");
         this._options.quiz = this._$.extend(true,{}, HzQuizResource.DEFAULTS_QUIZ, quizOptions);
+        this._$loading = this._$(this._options.loadingQuery);
         this._$element.jqQuiz(quizOptions);
         this._instance = this._$element.jqQuiz("instance");
         this._id = this._instance.getId();
@@ -177,56 +180,65 @@ export class HzQuizResource extends ResourceController {
     protected _onEnd(e,jqQuizInstance,calification,runtime){
         let instance = e.data.instance,
             scoreHighestThanPrevious,
-            newScore = instance._options.setScoreAsPercentage ? calification.percentage : calification.score;
+            newScore = instance._options.setScoreAsPercentage ? calification.percentage : calification.score,
+            defer = instance._$.Deferred();
         if(instance._scormService.LMSIsInitialized()){
-            let data = instance._getData();
-            if(instance._options.storeHighestScore){
-                let currentScore = instance._scormService.doLMSGetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`);
-                if(!currentScore || newScore >= currentScore){
-                    scoreHighestThanPrevious = true;
+            instance._showLoading();
+            setTimeout(()=>{
+                let data = instance._getData();
+                if(instance._options.storeHighestScore){
+                    let currentScore = instance._scormService.doLMSGetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`);
+                    if(!currentScore || newScore >= currentScore){
+                        scoreHighestThanPrevious = true;
+                        instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,newScore);
+                        instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,instance._options.objectiveAsCompleted ? "completed" : calification.success ? "passed" : "failed");
+                        if(instance._options.setScoreInPage) {
+                            instance._score = newScore;
+                        }
+                        data.r = runtime;
+                    }else{
+                        scoreHighestThanPrevious = false;
+                        if(instance._options.setScoreInPage) {
+                            instance._score = currentScore;
+                        }
+                    }
+                }else{
                     instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,newScore);
                     instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,instance._options.objectiveAsCompleted ? "completed" : calification.success ? "passed" : "failed");
                     if(instance._options.setScoreInPage) {
                         instance._score = newScore;
                     }
                     data.r = runtime;
-                }else{
-                    scoreHighestThanPrevious = false;
-                    if(instance._options.setScoreInPage) {
-                        instance._score = currentScore;
-                    }
                 }
-            }else{
-                instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.score.raw`,newScore);
-                instance._scormService.doLMSSetValue(`cmi.objectives.${instance._objectiveIndex}.status`,instance._options.objectiveAsCompleted ? "completed" : calification.success ? "passed" : "failed");
-                if(instance._options.setScoreInPage) {
-                    instance._score = newScore;
+                if(instance._options.saveRuntime) {
+                    instance._setData(data);
                 }
-                data.r = runtime;
-            }
-            if(instance._options.saveRuntime) {
-                instance._setData(data);
-            }
-            instance._scormService.doLMSCommit();
-            instance._resolveAttemptState();
-            calification.scoreHighestThanPrevious = scoreHighestThanPrevious;
+                instance._scormService.doLMSCommit();
+                instance._resolveAttemptState();
+                calification.scoreHighestThanPrevious = scoreHighestThanPrevious;
+                defer.resolve();
+            }, 500);
         }else if(instance._availableAttempts != undefined){
             instance._resolveAttemptState();
+            defer.resolve();
         }
-        instance._currentScore = newScore;
-        instance._resolveCurrentScore();
-        if(calification.success){
-            instance._$element.removeClass("hz-quiz--fail");
-            instance._$element.addClass("hz-quiz--pass");
-        }else{
-            instance._$element.removeClass("hz-quiz--pass");
-            instance._$element.addClass("hz-quiz--fail");
-        }
-        if(instance._options.onlyMarkAsCompletedOnPass == false || (instance._options.onlyMarkAsCompletedOnPass == true && calification.success) || (instance._availableAttempts == 0)){
-            instance._markAsCompleted();
-        }
-        instance._eventEmitter.trigger(HzQuizResource.ON_END,[instance, calification]);
-        instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_END,[instance, calification]);
+        defer.done(()=> {
+            instance._currentScore = newScore;
+            instance._resolveCurrentScore();
+            if (calification.success) {
+                instance._$element.removeClass("hz-quiz--fail");
+                instance._$element.addClass("hz-quiz--pass");
+            } else {
+                instance._$element.removeClass("hz-quiz--pass");
+                instance._$element.addClass("hz-quiz--fail");
+            }
+            if (instance._options.onlyMarkAsCompletedOnPass == false || (instance._options.onlyMarkAsCompletedOnPass == true && calification.success) || (instance._availableAttempts == 0)) {
+                instance._markAsCompleted();
+            }
+            instance._eventEmitter.trigger(HzQuizResource.ON_END, [instance, calification]);
+            instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_END, [instance, calification]);
+            instance._hideLoading();
+        });
     }
     protected _onStart(e,jqQuizInstance){
         let instance = e.data.instance;
@@ -239,6 +251,12 @@ export class HzQuizResource extends ResourceController {
             instance._eventEmitter.trigger(HzQuizResource.ON_START, [instance]);
             instance._eventEmitter.globalEmitter.trigger(HzQuizResource.ON_START, [instance]);
         }
+    }
+    protected _showLoading(){
+        this._$loading.show();
+    }
+    protected _hideLoading(){
+        this._$loading.hide();
     }
     protected _onStarted(e,jqQuizInstance){
         let instance = e.data.instance;

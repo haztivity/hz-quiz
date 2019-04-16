@@ -1,6 +1,6 @@
 {
   "name": "@haztivity/hz-quiz",
-  "version": "0.7.5-beta.11",
+  "version": "0.7.5-beta.12",
   "description": "Haztivity wrapper for jqQuiz",
   "main": "dist/HzQuiz.js",
   "module": "dist/HzQuiz.js",
@@ -25,7 +25,7 @@
   "homepage": "https://github.com/haztivity/hz-quiz/",
   "dependencies": {
     "@haztivity/core": "^0.7.13",
-    "jq-quiz": "^3.0.0-beta.2",
+    "jq-quiz": "^3.0.0-beta.3",
     "jquery-ui-dist": "^1.12.1",
     "lz-string": "^1.4.4"
   },
