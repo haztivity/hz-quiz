@@ -160,17 +160,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
                 .on("click." + HzQuizResource_1.NAMESPACE, "[data-jq-quiz-hz-review]", { instance: this }, this._onStartReview);
         };
         HzQuizResource.prototype._onEnd = function (e, jqQuizInstance, calification, runtime) {
-            var instance = e.data.instance, scoreHighestThanPrevious;
+            var instance = e.data.instance, scoreHighestThanPrevious, newScore = instance._options.setScoreAsPercentage ? calification.percentage : calification.score;
             if (instance._scormService.LMSIsInitialized()) {
                 var data = instance._getData();
                 if (instance._options.storeHighestScore) {
                     var currentScore = instance._scormService.doLMSGetValue("cmi.objectives." + instance._objectiveIndex + ".score.raw");
-                    if (!currentScore || calification.percentage >= currentScore) {
+                    if (!currentScore || newScore >= currentScore) {
                         scoreHighestThanPrevious = true;
-                        instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".score.raw", calification.percentage);
-                        instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".status", calification.success ? "passed" : "failed");
+                        instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".score.raw", newScore);
+                        instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".status", instance._options.objectiveAsCompleted ? "completed" : calification.success ? "passed" : "failed");
                         if (instance._options.setScoreInPage) {
-                            instance._score = calification.percentage;
+                            instance._score = newScore;
                         }
                         data.r = runtime;
                     }
@@ -182,10 +182,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
                     }
                 }
                 else {
-                    instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".score.raw", calification.percentage);
-                    instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".status", calification.success ? "passed" : "failed");
+                    instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".score.raw", newScore);
+                    instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".status", instance._options.objectiveAsCompleted ? "completed" : calification.success ? "passed" : "failed");
                     if (instance._options.setScoreInPage) {
-                        instance._score = calification.percentage;
+                        instance._score = newScore;
                     }
                     data.r = runtime;
                 }
@@ -199,7 +199,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             else if (instance._availableAttempts != undefined) {
                 instance._resolveAttemptState();
             }
-            instance._currentScore = calification.percentage;
+            instance._currentScore = newScore;
             instance._resolveCurrentScore();
             if (calification.success) {
                 instance._$element.removeClass("hz-quiz--fail");
@@ -212,8 +212,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             if (instance._options.onlyMarkAsCompletedOnPass == false || (instance._options.onlyMarkAsCompletedOnPass == true && calification.success) || (instance._availableAttempts == 0)) {
                 instance._markAsCompleted();
             }
-            instance._eventEmitter.trigger(HzQuizResource_1.ON_END, [this, calification]);
-            instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_END, [this, calification]);
+            instance._eventEmitter.trigger(HzQuizResource_1.ON_END, [instance, calification]);
+            instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_END, [instance, calification]);
         };
         HzQuizResource.prototype._onStart = function (e, jqQuizInstance) {
             var instance = e.data.instance;
@@ -223,8 +223,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
                     instance._availableAttempts--;
                 }
                 instance._storeAttempt();
-                instance._eventEmitter.trigger(HzQuizResource_1.ON_START, [this]);
-                instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_START, [this]);
+                instance._eventEmitter.trigger(HzQuizResource_1.ON_START, [instance]);
+                instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_START, [instance]);
             }
         };
         HzQuizResource.prototype._onStarted = function (e, jqQuizInstance) {
@@ -234,14 +234,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
                     instance._scormService.doLMSSetValue("cmi.objectives." + instance._objectiveIndex + ".status", "incomplete");
                     instance._scormService.doLMSCommit();
                 }
-                instance._eventEmitter.trigger(HzQuizResource_1.ON_STARTED, [this]);
-                instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_STARTED, [this]);
+                instance._eventEmitter.trigger(HzQuizResource_1.ON_STARTED, [instance]);
+                instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_STARTED, [instance]);
             }
         };
         HzQuizResource.prototype._onOptionChange = function (e, jqQuizInstance, questionId, optionId) {
             var instance = e.data.instance;
-            instance._eventEmitter.trigger(HzQuizResource_1.ON_ANSWER, [this, questionId, optionId]);
-            instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_ANSWER, [this, questionId, optionId]);
+            instance._eventEmitter.trigger(HzQuizResource_1.ON_ANSWER, [instance, questionId, optionId]);
+            instance._eventEmitter.globalEmitter.trigger(HzQuizResource_1.ON_ANSWER, [instance, questionId, optionId]);
         };
         HzQuizResource.prototype._setSuspendData = function (data) {
             return this._scormService.setSuspendData(data);
@@ -349,9 +349,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             attempts: -1,
             onlyMarkAsCompletedOnPass: true,
             setScoreInPage: false,
+            setScoreAsPercentage: true,
             saveRuntime: false,
             autoComplete: false,
-            compressRuntime: false
+            compressRuntime: false,
+            objectiveAsCompleted: false
         };
         HzQuizResource = HzQuizResource_1 = __decorate([
             core_1.Resource({
