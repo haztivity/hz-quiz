@@ -159,7 +159,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
                 .on("click." + HzQuizResource_1.NAMESPACE, "[data-jq-quiz-hz-review]", { instance: this }, this._onStartReview);
         };
         HzQuizResource.prototype._onEnd = function (e, jqQuizInstance, calification, runtime) {
-            var instance = e.data.instance, scoreHighestThanPrevious, newScore = instance._options.setScoreAsPercentage ? calification.percentage : calification.score, defer = instance._$.Defered();
+            var instance = e.data.instance, scoreHighestThanPrevious, newScore = instance._options.setScoreAsPercentage ? calification.percentage : calification.score, defer = instance._$.Deferred();
             if (instance._scormService.LMSIsInitialized()) {
                 instance._showLoading();
                 setTimeout(function () {
