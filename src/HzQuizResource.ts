@@ -182,6 +182,7 @@ export class HzQuizResource extends ResourceController {
             scoreHighestThanPrevious,
             newScore = instance._options.setScoreAsPercentage ? calification.percentage : calification.score,
             defer = instance._$.Deferred();
+        newScore = instance._options.hasOwnProperty("resolveScore") ? instance._options.resolveScore(jqQuizInstance, calification, runtime, newScore) : newScore;
         if(instance._scormService.LMSIsInitialized()){
             instance._showLoading();
             setTimeout(()=>{

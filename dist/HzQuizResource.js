@@ -160,6 +160,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
         };
         HzQuizResource.prototype._onEnd = function (e, jqQuizInstance, calification, runtime) {
             var instance = e.data.instance, scoreHighestThanPrevious, newScore = instance._options.setScoreAsPercentage ? calification.percentage : calification.score, defer = instance._$.Deferred();
+            newScore = instance._options.hasOwnProperty("resolveScore") ? instance._options.resolveScore(jqQuizInstance, calification, runtime, newScore) : newScore;
             if (instance._scormService.LMSIsInitialized()) {
                 instance._showLoading();
                 setTimeout(function () {
